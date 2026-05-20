@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment & Secrets
+.env
+*.env
+google-services.json
+GoogleService-Info.plist
+*.jks
+key.properties
+
+# VS Code (uncomment if you don't want to share your VS Code settings)
+.vscode/
