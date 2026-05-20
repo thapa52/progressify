@@ -20,15 +20,15 @@ class ApiService {
   final LocalStorage _storage = LocalStorage();
 
   ApiService() {
-    _dio = _buildDio();
-    _refreshDio = _buildDio();
+    _dio = _createDioInstance();
+    _refreshDio = _createDioInstance();
   }
 
   // ─────────────────────────────────────────────
   // DIO SETUP
   // ─────────────────────────────────────────────
 
-  Dio _buildDio() {
+  Dio _createDioInstance() {
     final String baseUrl = AppConstants.baseUrl;
     final String normalizedBase = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
 
@@ -54,7 +54,7 @@ class ApiService {
   // HEADERS
   // ─────────────────────────────────────────────
 
-  Map<String, String> _buildHeaders({bool isJson = false}) {
+  Map<String, String> _prepareHeaders({bool isJson = false}) {
     final String platform = Platform.isIOS ? 'ios' : 'android';
 
     return <String, String>{
@@ -66,20 +66,20 @@ class ApiService {
   }
 
   // ─────────────────────────────────────────────
-  // PATH NORMALISATION
+  // PATH SANITIZATION
   // ─────────────────────────────────────────────
 
-  String _normalisePath(String path) =>
+  String _sanitizePath(String path) =>
       path.startsWith('/') ? path.substring(1) : path;
 
   // ─────────────────────────────────────────────
   // RETRY CONFIGURATION
   // ─────────────────────────────────────────────
 
-  static const int _maxRetries = 2;
-  static const Duration _retryDelay = Duration(seconds: 1);
+  static const int _retryLimit = 2;
+  static const Duration _retryInterval = Duration(seconds: 1);
 
-  Future<Response<dynamic>> _withRetry(
+  Future<Response<dynamic>> _executeWithRetry(
     Future<Response<dynamic>> Function() request,
     String method,
     String path,
@@ -98,14 +98,14 @@ class ApiService {
         if (!isTransient) rethrow;
 
         attempt++;
-        if (attempt > _maxRetries) rethrow;
+        if (attempt > _retryLimit) rethrow;
 
         appLogger.w(
           'RETRY [$method] $path '
-          '(attempt $attempt/$_maxRetries) — ${e.message}',
+          '(attempt $attempt/$_retryLimit) — ${e.message}',
         );
 
-        await Future<void>.delayed(_retryDelay * attempt);
+        await Future<void>.delayed(_retryInterval * attempt);
       }
     }
   }
@@ -114,28 +114,28 @@ class ApiService {
   // TOKEN REFRESH
   // ─────────────────────────────────────────────
 
-  static Completer<bool>? _refreshCompleter;
+  static Completer<bool>? _tokenRefreshLock;
 
-  Future<bool> attemptTokenRefresh() async {
-    if (_refreshCompleter != null) {
-      return _refreshCompleter!.future;
+  Future<bool> refreshToken() async {
+    if (_tokenRefreshLock != null) {
+      return _tokenRefreshLock!.future;
     }
 
-    _refreshCompleter = Completer<bool>();
+    _tokenRefreshLock = Completer<bool>();
 
     try {
-      final bool success = await _doRefresh();
-      _refreshCompleter!.complete(success);
+      final bool success = await _refreshAccessToken();
+      _tokenRefreshLock!.complete(success);
       return success;
     } catch (e) {
-      _refreshCompleter!.complete(false);
+      _tokenRefreshLock!.complete(false);
       return false;
     } finally {
-      _refreshCompleter = null;
+      _tokenRefreshLock = null;
     }
   }
 
-  Future<bool> _doRefresh() async {
+  Future<bool> _refreshAccessToken() async {
     try {
       final currentToken = getToken();
       if (currentToken == null || currentToken.isEmpty) {
@@ -178,7 +178,11 @@ class ApiService {
   // ERROR HANDLING
   // ─────────────────────────────────────────────
 
-  Never _throwFailure(Response<dynamic> response, String method, String path) {
+  Never _handleErrorResponse(
+    Response<dynamic> response,
+    String method,
+    String path,
+  ) {
     final int? statusCode = response.statusCode;
 
     appLogger.e('$method $path → Error $statusCode');
@@ -221,12 +225,12 @@ class ApiService {
   // 401 HANDLER
   // ─────────────────────────────────────────────
 
-  Future<Response<dynamic>> _handle401(
+  Future<Response<dynamic>> _handleUnauthorized(
     String method,
     String path,
     Future<Response<dynamic>> Function() retryRequest,
   ) async {
-    final bool refreshed = await attemptTokenRefresh();
+    final bool refreshed = await refreshToken();
 
     if (!refreshed) {
       throw const UnauthorizedFailure(
@@ -246,7 +250,7 @@ class ApiService {
       );
     }
 
-    _throwFailure(retryResponse, method, path);
+    _handleErrorResponse(retryResponse, method, path);
   }
 
   // ─────────────────────────────────────────────
@@ -256,35 +260,35 @@ class ApiService {
   // ── GET ───────────────────────────────────────
 
   Future<dynamic> get(String path) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     try {
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () => _dio.get<dynamic>(
-          normPath,
-          options: Options(headers: _buildHeaders()),
+          cleanPath,
+          options: Options(headers: _prepareHeaders()),
         ),
         'GET',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('GET $normPath → ${response.statusCode}');
+      appLogger.d('GET $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200) return response.data;
 
       if (response.statusCode == 401) {
-        final retry = await _handle401(
+        final retry = await _handleUnauthorized(
           'GET',
-          normPath,
+          cleanPath,
           () => _dio.get<dynamic>(
-            normPath,
-            options: Options(headers: _buildHeaders()),
+            cleanPath,
+            options: Options(headers: _prepareHeaders()),
           ),
         );
         return retry.data;
       }
 
-      _throwFailure(response, 'GET', normPath);
+      _handleErrorResponse(response, 'GET', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
@@ -296,39 +300,39 @@ class ApiService {
     String path, {
     Map<String, dynamic> body = const <String, dynamic>{},
   }) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     try {
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () => _dio.post<dynamic>(
-          normPath,
+          cleanPath,
           data: body,
-          options: Options(headers: _buildHeaders(isJson: true)),
+          options: Options(headers: _prepareHeaders(isJson: true)),
         ),
         'POST',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('POST $normPath → ${response.statusCode}');
+      appLogger.d('POST $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
 
       if (response.statusCode == 401) {
-        final retry = await _handle401(
+        final retry = await _handleUnauthorized(
           'POST',
-          normPath,
+          cleanPath,
           () => _dio.post<dynamic>(
-            normPath,
+            cleanPath,
             data: body,
-            options: Options(headers: _buildHeaders(isJson: true)),
+            options: Options(headers: _prepareHeaders(isJson: true)),
           ),
         );
         return retry.data;
       }
 
-      _throwFailure(response, 'POST', normPath);
+      _handleErrorResponse(response, 'POST', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
@@ -340,39 +344,39 @@ class ApiService {
     String path, {
     Map<String, dynamic> body = const <String, dynamic>{},
   }) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     try {
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () => _dio.put<dynamic>(
-          normPath,
+          cleanPath,
           data: body,
-          options: Options(headers: _buildHeaders(isJson: true)),
+          options: Options(headers: _prepareHeaders(isJson: true)),
         ),
         'PUT',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('PUT $normPath → ${response.statusCode}');
+      appLogger.d('PUT $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
 
       if (response.statusCode == 401) {
-        final retry = await _handle401(
+        final retry = await _handleUnauthorized(
           'PUT',
-          normPath,
+          cleanPath,
           () => _dio.put<dynamic>(
-            normPath,
+            cleanPath,
             data: body,
-            options: Options(headers: _buildHeaders(isJson: true)),
+            options: Options(headers: _prepareHeaders(isJson: true)),
           ),
         );
         return retry.data;
       }
 
-      _throwFailure(response, 'PUT', normPath);
+      _handleErrorResponse(response, 'PUT', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
@@ -384,39 +388,39 @@ class ApiService {
     String path, {
     Map<String, dynamic> body = const <String, dynamic>{},
   }) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     try {
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () => _dio.patch<dynamic>(
-          normPath,
+          cleanPath,
           data: body,
-          options: Options(headers: _buildHeaders(isJson: true)),
+          options: Options(headers: _prepareHeaders(isJson: true)),
         ),
         'PATCH',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('PATCH $normPath → ${response.statusCode}');
+      appLogger.d('PATCH $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
 
       if (response.statusCode == 401) {
-        final retry = await _handle401(
+        final retry = await _handleUnauthorized(
           'PATCH',
-          normPath,
+          cleanPath,
           () => _dio.patch<dynamic>(
-            normPath,
+            cleanPath,
             data: body,
-            options: Options(headers: _buildHeaders(isJson: true)),
+            options: Options(headers: _prepareHeaders(isJson: true)),
           ),
         );
         return retry.data;
       }
 
-      _throwFailure(response, 'PATCH', normPath);
+      _handleErrorResponse(response, 'PATCH', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
@@ -425,37 +429,37 @@ class ApiService {
   // ── DELETE ────────────────────────────────────
 
   Future<dynamic> delete(String path) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     try {
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () => _dio.delete<dynamic>(
-          normPath,
-          options: Options(headers: _buildHeaders()),
+          cleanPath,
+          options: Options(headers: _prepareHeaders()),
         ),
         'DELETE',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('DELETE $normPath → ${response.statusCode}');
+      appLogger.d('DELETE $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
 
       if (response.statusCode == 401) {
-        final retry = await _handle401(
+        final retry = await _handleUnauthorized(
           'DELETE',
-          normPath,
+          cleanPath,
           () => _dio.delete<dynamic>(
-            normPath,
-            options: Options(headers: _buildHeaders()),
+            cleanPath,
+            options: Options(headers: _prepareHeaders()),
           ),
         );
         return retry.data;
       }
 
-      _throwFailure(response, 'DELETE', normPath);
+      _handleErrorResponse(response, 'DELETE', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
@@ -469,7 +473,7 @@ class ApiService {
     String? fileField,
     String? filePath,
   }) async {
-    final String normPath = _normalisePath(path);
+    final String cleanPath = _sanitizePath(path);
 
     Future<FormData> buildForm() async {
       final Map<String, dynamic> formMap = <String, dynamic>{...fields};
@@ -481,41 +485,45 @@ class ApiService {
 
     try {
       final Map<String, String> headers = Map<String, String>.from(
-        _buildHeaders(),
+        _prepareHeaders(),
       )..remove('Content-Type');
 
-      final Response<dynamic> response = await _withRetry(
+      final Response<dynamic> response = await _executeWithRetry(
         () async => _dio.post<dynamic>(
-          normPath,
+          cleanPath,
           data: await buildForm(),
           options: Options(headers: headers),
         ),
         'MULTIPART',
-        normPath,
+        cleanPath,
       );
 
-      appLogger.d('MULTIPART $normPath → ${response.statusCode}');
+      appLogger.d('MULTIPART $cleanPath → ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
 
       if (response.statusCode == 401) {
-        final retry = await _handle401('MULTIPART', normPath, () async {
-          final Map<String, String> retryHeaders = Map<String, String>.from(
-            _buildHeaders(),
-          )..remove('Content-Type');
+        final retry = await _handleUnauthorized(
+          'MULTIPART',
+          cleanPath,
+          () async {
+            final Map<String, String> retryHeaders = Map<String, String>.from(
+              _prepareHeaders(),
+            )..remove('Content-Type');
 
-          return _dio.post<dynamic>(
-            normPath,
-            data: await buildForm(),
-            options: Options(headers: retryHeaders),
-          );
-        });
+            return _dio.post<dynamic>(
+              cleanPath,
+              data: await buildForm(),
+              options: Options(headers: retryHeaders),
+            );
+          },
+        );
         return retry.data;
       }
 
-      _throwFailure(response, 'MULTIPART', normPath);
+      _handleErrorResponse(response, 'MULTIPART', cleanPath);
     } on DioException catch (e) {
       throw NetworkFailure(message: e.message ?? 'Network error occurred');
     }
