@@ -13,6 +13,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
   flutter_dotenv: ^6.0.1
+  dio: ^5.9.2
+  connectivity_plus: ^7.1.1
+  logger: ^2.7.0
 
 dev_dependencies:
   flutter_test:
