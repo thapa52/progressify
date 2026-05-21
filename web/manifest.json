@@ -1,6 +1,6 @@
 {
-    "name": "video_journal",
-    "short_name": "video_journal",
+    "name": "progressify",
+    "short_name": "progressify",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

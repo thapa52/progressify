@@ -1,4 +1,4 @@
-package com.example.video_journal
+package com.example.progressify
 
 import io.flutter.embedding.android.FlutterActivity
 
