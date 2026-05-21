@@ -15,7 +15,7 @@ class AppRoutes {
 
 // Router provider
 final appRouteProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final isLoggedIn = ref.watch(isAuthenticatedProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.home,
@@ -23,7 +23,6 @@ final appRouteProvider = Provider<GoRouter>((ref) {
     // This runs before every navigation
     // It checks if the user is allowed to see the page
     redirect: (context, state) {
-      final isLoggedIn = authState.status == AuthStatus.authenticated;
       final isOnLoginPage = state.matchedLocation == AppRoutes.login;
 
       // If NOT logged in and NOT on login page → go to login

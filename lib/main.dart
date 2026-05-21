@@ -22,7 +22,7 @@ class MyApp extends ConsumerWidget {
     final router = ref.watch(appRouteProvider);
 
     return MaterialApp.router(
-      title: 'Video Journal',
+      title: 'Progressify',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: ThemeData(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/utils/app_snackbar.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_entity.dart';
@@ -71,12 +72,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on Failure catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
       appLogger.e('Login failed: ${e.message}');
+      AppSnackbar.error(e.message);
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
         errorMessage: 'An unexpected error occurred',
       );
       appLogger.e('Login unexpected error: $e');
+      AppSnackbar.error('An unexpected error occurred: $e');
     }
   }
 
@@ -92,3 +95,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 }
+
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  return ref.watch(
+    authProvider.select((value) => value.status == AuthStatus.authenticated),
+  );
+});

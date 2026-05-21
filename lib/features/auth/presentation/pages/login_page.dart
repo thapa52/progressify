@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/utils/app_messenger.dart';
 import '../../../../core/utils/system_ui_helper.dart';
+import '../../../../core/widgets/app_text.dart';
 import '../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -19,40 +19,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
-  ProviderSubscription<AuthState>? _authSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _authSubscription = ref.listenManual<AuthState>(authProvider, (
-      previous,
-      next,
-    ) {
-      // Show snackbar when auth state changes to error
-      if (previous?.status != next.status &&
-          next.status == AuthStatus.error &&
-          next.errorMessage != null) {
-        rootScaffoldMessengerKey.currentState
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(next.errorMessage!),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-      }
-    });
-  }
-
   @override
   void dispose() {
-    _authSubscription?.close();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -61,7 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _onLoginPressed() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref
+    ref
         .read(authProvider.notifier)
         .login(
           email: _emailController.text.trim(),
@@ -97,21 +65,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           color: Colors.deepPurple,
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        AppText(
                           'Welcome Back',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                          ),
+                          style: AppTextStyle.heading,
+                          color: Colors.deepPurple,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        AppText(
                           'Sign in to continue',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                          style: AppTextStyle.body,
+                          color: Colors.grey,
                         ),
                       ],
                     ),
@@ -120,11 +83,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 48),
 
                   // ── Email Field ───────────────────────
-                  Text(
+                  AppText(
                     'Email',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyle.bodyBold,
+                    color: Colors.black,
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -165,11 +127,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 20),
 
                   // ── Password Field ────────────────────
-                  Text(
+                  AppText(
                     'Password',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyle.bodyBold,
+                    color: Colors.black,
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -244,12 +205,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                              : const Text(
+                              : const AppText(
                                 'Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: AppTextStyle.button,
+                                color: Colors.white,
                               ),
                     ),
                   ),
