@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/router/app_router.dart';
 import 'core/storage/local_storage.dart';
-import 'features/auth/presentation/pages/login_page.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
+import 'core/utils/app_messenger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,36 +19,17 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
+    final router = ref.watch(appRouteProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Video Journal',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: _buildHome(authState),
+      routerConfig: router,
     );
-  }
-
-  Widget _buildHome(AuthState authState) {
-    switch (authState.status) {
-      case AuthStatus.authenticated:
-        return const Scaffold(
-          body: Center(
-            child: Text(
-              'Welcome! You are logged in.',
-              style: TextStyle(fontSize: 18),
-            ),
-          ),
-        );
-
-      case AuthStatus.initial:
-      case AuthStatus.unauthenticated:
-      case AuthStatus.loading:
-      case AuthStatus.error:
-        return const LoginPage();
-    }
   }
 }
