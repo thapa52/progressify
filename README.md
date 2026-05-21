@@ -1,4 +1,4 @@
-# 📹 Video Journal App
+# Progressify App
 
 A professional cross-platform mobile application built with 
 Flutter, demonstrating clean architecture, Riverpod state 
@@ -6,7 +6,7 @@ management, and complex media handling capabilities.
 
 ---
 
-## 🔄 Architecture Highlight
+## Architecture Highlight
 This project is built using **Riverpod** state management 
 with **Clean Architecture** principles, demonstrating:
 - Clear separation of concerns (Data, Domain, Presentation)
@@ -15,20 +15,20 @@ with **Clean Architecture** principles, demonstrating:
 
 ---
 
-## ✨ Features
-- 🔐 User Authentication (Login/Logout)
-- 👤 User Profile Management
-- 📋 Browse Program Templates
-- 📌 View Program Template Details
-- 🏃 Track Active Programs
-- 📊 View Active Program Details
-- 🎥 Record Videos
-- 🎤 Record Audio
-- ▶️ Play Videos & Audio
+## Features
+- User Authentication (Login/Logout)
+- User Profile Management
+- Browse Program Templates
+- View Program Template Details
+- Track Active Programs
+- View Active Program Details
+- Record Videos
+- Record Audio
+-  Play Videos & Audio
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 - **Framework:** Flutter & Dart
 - **State Management:** Riverpod
 - **Architecture:** Clean Architecture
