@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/providers/user_provider.dart';
+import '../router/app_router.dart';
 import 'app_text.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -47,53 +49,35 @@ class AppDrawer extends ConsumerWidget {
               size: size,
               icon: Icons.home,
               label: 'Home',
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                context.go(AppRoutes.home);
+              },
+            ),
+            _buildMenuItem(
+              size: size,
+              icon: Icons.account_circle,
+              label: 'Profile',
+              onTap: () {
+                Navigator.pop(context);
+                context.push(AppRoutes.profile);
+              },
             ),
             _buildMenuItem(
               size: size,
               icon: Icons.play_circle_fill_rounded,
-              label: 'Active Program',
-              onTap: () {},
+              label: 'My Quest',
+              onTap: () {
+                Navigator.pop(context);
+              },
             ),
             _buildMenuItem(
               size: size,
               icon: Icons.add_circle,
-              label: 'Browse Program',
-              onTap: () {},
-            ),
-            _buildMenuItem(
-              size: size,
-              icon: Icons.stream,
-              label: 'Streak',
-              onTap: () {},
-            ),
-            Divider(color: Colors.white),
-            _buildMenuItem(
-              size: size,
-              icon: Icons.logout,
-              label: 'LogOut',
-              onTap: () {},
-            ),
-            Container(
-              alignment: Alignment.center,
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Terms and Condition',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    TextSpan(
-                      text: ' | ',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
+              label: 'Browse Quests',
+              onTap: () {
+                Navigator.pop(context);
+              },
             ),
           ],
         ),

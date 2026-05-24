@@ -18,13 +18,10 @@ with **Clean Architecture** principles, demonstrating:
 ## Features
 - User Authentication (Login/Logout)
 - User Profile Management
-- Browse Program Templates
-- View Program Template Details
-- Track Active Programs
-- View Active Program Details
-- Record Videos
-- Record Audio
--  Play Videos & Audio
+- Browse Quests
+- View Quest Details
+- My Quests
+- Track Quest Progress
 
 ---
 
