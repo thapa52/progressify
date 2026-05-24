@@ -11,7 +11,10 @@ class AppScaffold extends StatelessWidget {
   final SystemUiOverlayStyle systemUiOverlayStyle;
   final List<Widget>? actions;
   final Color appBarColor;
-  final Color drawerHeaderColor;
+  final Color foregroundColor;
+  final Color? drawerHeaderColor;
+  final bool showDrawer;
+  final bool centerTitle;
 
   const AppScaffold({
     super.key,
@@ -20,17 +23,21 @@ class AppScaffold extends StatelessWidget {
     required this.systemUiOverlayStyle,
     this.actions,
     this.appBarColor = Colors.indigo,
-    this.drawerHeaderColor = Colors.indigo,
+    this.foregroundColor = Colors.white,
+    this.drawerHeaderColor,
+    this.showDrawer = true,
+    this.centerTitle = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       onDrawerChanged: (isOpened) {
         if (isOpened) {
           SystemChrome.setSystemUIOverlayStyle(
             SystemUIHelper.custom(
-              statusBarColor: drawerHeaderColor,
+              statusBarColor: drawerHeaderColor ?? appBarColor,
               iconBrightness: Brightness.light,
             ),
           );
@@ -38,12 +45,15 @@ class AppScaffold extends StatelessWidget {
           SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
         }
       },
-      drawer: AppDrawer(headerColor: drawerHeaderColor),
+      drawer:
+          showDrawer
+              ? AppDrawer(headerColor: drawerHeaderColor ?? appBarColor)
+              : null,
       appBar: AppBar(
         title: AppText(title, style: AppTextStyle.title, color: Colors.white),
-        centerTitle: true,
+        centerTitle: centerTitle,
         backgroundColor: appBarColor,
-        foregroundColor: Colors.white,
+        foregroundColor: foregroundColor,
         systemOverlayStyle: systemUiOverlayStyle,
         actions: actions,
       ),

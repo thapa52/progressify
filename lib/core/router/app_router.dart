@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 
 // Route paths as constants
 class AppRoutes {
@@ -11,6 +12,7 @@ class AppRoutes {
 
   static const String login = '/login';
   static const String home = '/';
+  static const String profile = '/profile';
 }
 
 // Router provider
@@ -40,6 +42,10 @@ final appRouteProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: AppRoutes.login, builder: (context, state) => LoginPage()),
       GoRoute(path: AppRoutes.home, builder: (context, state) => HomePage()),
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (context, state) => ProfilePage(),
+      ),
     ],
   );
 });
